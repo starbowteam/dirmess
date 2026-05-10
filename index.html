@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>DIRMESS · Мессенджер</title>
+  <link rel="icon" type="image/x-icon" href="fulco.ico">
+  <link rel="apple-touch-icon" href="logo.png">
+  <meta name="theme-color" content="#121212">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+  <link rel="stylesheet" href="style.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700;14..32,800&display=swap" rel="stylesheet">
+  
+  <!-- Supabase -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  
+  <!-- KaTeX + mhchem -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/mhchem.min.js"></script>
+  
+  <!-- Markdown -->
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.11/dist/purify.min.js"></script>
+</head>
+<body>
+  <!-- Заставка -->
+  <div class="welcome-screen" id="welcomeScreen">
+    <div class="spinner-container"><i class="fas fa-circle-notch fa-spin"></i></div>
+  </div>
+
+  <!-- Экран авторизации (DiamKey) -->
+  <div class="auth-screen" id="authScreen" style="display: none;">
+    <div class="auth-container">
+      <div class="auth-logo">
+        <img src="logo.png" alt="logo" class="auth-logo-img">
+        <h1>DIRMESS</h1>
+        <p>Войдите или создайте DiamKey</p>
+      </div>
+      <div class="auth-tabs">
+        <button class="auth-tab active" id="tabLogin">Вход</button>
+        <button class="auth-tab" id="tabRegister">Регистрация</button>
+      </div>
+      <div id="loginForm" class="auth-form">
+        <div class="input-group"><label>Логин</label><input id="loginIdentity" placeholder="Логин"></div>
+        <div class="input-group"><label>Пароль</label><input id="loginPassword" type="password" placeholder="········"></div>
+        <button class="btn-auth" id="doLoginBtn"><i class="fas fa-gem"></i> Войти</button>
+      </div>
+      <div id="registerForm" class="auth-form" style="display:none;">
+        <div class="input-group"><label>Логин</label><input id="regLogin" placeholder="Придумайте логин"></div>
+        <div class="input-group"><label>Пароль</label><input id="regPassword" type="password" placeholder="Минимум 6 символов"></div>
+        <div class="input-group"><label>Теги (через запятую)</label><input id="regTags" placeholder="интересы, навыки..."></div>
+        <button class="btn-auth" id="doRegisterBtn"><i class="fas fa-user-plus"></i> Создать DiamKey</button>
+      </div>
+      <p class="auth-footer"><a href="https://diamkey.ru" target="_blank">Управление аккаунтом на DiamKey</a></p>
+    </div>
+  </div>
+
+  <!-- Основной интерфейс -->
+  <div class="main-ui" id="mainUI" style="display: none;">
+    <header class="title-bar">
+      <div class="title-bar-left">
+        <button class="sidebar-toggle" id="sidebarToggle"><i class="fas fa-bars"></i></button>
+        <div class="logo">
+          <img src="logo.png" class="logo-img">
+          <span class="logo-text">DIRMESS</span>
+        </div>
+      </div>
+      <div class="title-bar-center">
+        <div class="view-tabs">
+          <button class="view-tab active" data-view="ai"><i class="fas fa-robot"></i> ИИ-помощник</button>
+          <button class="view-tab" data-view="wall"><i class="fas fa-globe"></i> Общая стена</button>
+        </div>
+      </div>
+      <div class="title-bar-right">
+        <button class="search-tags-btn" id="searchTagsBtn" title="Поиск по тегам"><i class="fas fa-search"></i></button>
+      </div>
+    </header>
+
+    <div class="app-body">
+      <!-- Сайдбар с историей чатов -->
+      <aside class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+          <div class="new-chat-btn" id="newAiChatBtn"><i class="fas fa-plus"></i> Новый чат</div>
+          <div class="search-box">
+            <i class="fas fa-search"></i>
+            <input type="text" id="historySearch" placeholder="Поиск чата...">
+          </div>
+        </div>
+        <div class="chat-list" id="chatList"></div>
+        <div class="user-panel">
+          <div class="user-avatar"><img id="userAvatarImg" src="" alt="avatar"></div>
+          <div class="user-info"><span id="userNameDisplay">Пользователь</span></div>
+          <button class="user-menu-btn" id="userMenuBtn"><i class="fas fa-ellipsis-v"></i></button>
+          <div class="user-dropdown" id="userDropdown">
+            <button id="dropdownProfile"><i class="fas fa-id-card"></i> Мой профиль</button>
+            <button id="dropdownLogout"><i class="fas fa-sign-out-alt"></i> Выйти</button>
+          </div>
+        </div>
+      </aside>
+
+      <!-- Контентная область -->
+      <main class="content">
+        <!-- Чат с ИИ -->
+        <div class="ai-chat-view" id="aiChatView">
+          <div class="messages-container" id="aiMessages"></div>
+          <div class="input-area" id="aiInputArea">
+            <div class="input-wrapper">
+              <textarea id="aiUserInput" placeholder="Спроси ИИ..." rows="1"></textarea>
+              <button class="send-btn" id="aiSendBtn" disabled><i class="fas fa-arrow-up"></i></button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Общая стена -->
+        <div class="wall-view" id="wallView" style="display:none;">
+          <div class="wall-header">
+            <h2><i class="fas fa-globe"></i> Общая стена</h2>
+            <div class="tag-filter" id="tagFilterContainer" style="display:none;">
+              <span class="filter-label">Фильтр по тегу:</span>
+              <span class="active-tag" id="activeTag"></span>
+              <button class="clear-filter" id="clearTagFilter"><i class="fas fa-times"></i></button>
+            </div>
+          </div>
+          <div class="wall-messages" id="wallMessages"></div>
+          <div class="wall-input-area">
+            <div class="wall-input-wrapper">
+              <textarea id="wallMessageInput" placeholder="Что нового?..." rows="1"></textarea>
+              <button class="wall-send-btn" id="wallSendBtn"><i class="fas fa-paper-plane"></i></button>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <!-- Модалка профиля -->
+  <div class="modal-overlay" id="profileModal" style="display:none;">
+    <div class="modal-container">
+      <div class="modal-header">
+        <h3 id="profileModalTitle">Профиль</h3>
+        <button class="modal-close" id="closeProfileModal"><i class="fas fa-times"></i></button>
+      </div>
+      <div class="modal-body" id="profileModalBody"></div>
+    </div>
+  </div>
+
+  <!-- Тосты -->
+  <div id="toastContainer" class="toast-container"></div>
+
+  <script src="app.js"></script>
+</body>
+</html>
